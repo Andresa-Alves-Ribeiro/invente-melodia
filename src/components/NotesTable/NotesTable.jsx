@@ -466,12 +466,12 @@ export default function NotesTable() {
     const filledCount = Object.keys(cells).length;
 
     return (
-        <div className="w-full overflow-hidden rounded-2xl border-2 border-stage-gold/25 bg-gradient-to-b from-[#1a1535]/95 to-stage-panel/90 p-1 shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_0_1px_rgba(244,208,63,0.12),inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-sm sm:p-1.5">
-            <div className="rounded-xl border border-white/5 bg-black/20 p-4 sm:p-6">
-                <div className="mb-5 flex flex-col gap-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-100 shadow-[0_0_20px_rgba(52,211,153,0.15)] sm:text-sm">
+        <div className="w-full min-w-0 overflow-hidden rounded-2xl border-2 border-stage-gold/25 bg-gradient-to-b from-[#1a1535]/95 to-stage-panel/90 p-1 shadow-[0_24px_60px_rgba(0,0,0,0.5),0_0_0_1px_rgba(244,208,63,0.12),inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-sm sm:p-1.5">
+            <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 p-3 sm:p-6">
+                <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:gap-4">
+                    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-start">
+                            <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-center text-xs font-semibold text-emerald-100 shadow-[0_0_20px_rgba(52,211,153,0.15)] sm:text-sm">
                                 <span className="relative flex h-2 w-2">
                                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40" />
 
@@ -487,49 +487,51 @@ export default function NotesTable() {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2 text-[11px] text-violet-200/90 sm:text-xs">
-                            <span className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 shadow-sm transition hover:border-white/20">
+                        <div className="grid w-full max-w-md grid-cols-1 gap-1.5 text-[11px] text-violet-200/90 min-[480px]:grid-cols-3 min-[480px]:gap-2 sm:max-w-none sm:flex sm:w-auto sm:flex-1 sm:flex-wrap sm:justify-end sm:gap-2 sm:text-xs">
+                            <span className="block rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-center leading-snug shadow-sm transition min-[480px]:text-left sm:inline-block sm:text-left sm:hover:border-white/20">
                                 <span className="font-semibold text-stage-gold">Esq.</span> nota
                                 preta
                             </span>
 
-                            <span className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 shadow-sm transition hover:border-white/20">
+                            <span className="block rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-center leading-snug shadow-sm transition min-[480px]:text-left sm:inline-block sm:text-left sm:hover:border-white/20">
                                 <span className="font-semibold text-stage-mint">Dir.</span> nota
                                 verde
                             </span>
 
-                            <span className="rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 shadow-sm transition hover:border-white/20">
+                            <span className="block rounded-lg border border-white/10 bg-black/30 px-2.5 py-1.5 text-center text-[10px] leading-snug shadow-sm transition min-[480px]:text-left min-[480px]:text-xs sm:inline-block sm:text-left sm:text-xs sm:hover:border-white/20">
                                 Duplo clique / duplo direito apaga
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="relative mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
-                    <div
-                        className="relative z-0 flex h-14 items-end justify-center gap-1 sm:absolute sm:inset-x-0 sm:top-1/2 sm:-translate-y-1/2 sm:pointer-events-none"
-                        aria-hidden
-                    >
-                        {[0, 1, 2, 3, 4].map((i) => (
-                            <span
-                                key={i}
-                                className={`notes-eq-bar w-2 rounded-sm bg-gradient-to-t from-emerald-600 to-stage-mint ${isReplaying ? "notes-eq-bar--playing" : ""}`}
-                                style={{
-                                    animationDelay: `${i * 0.12}s`,
-                                    height: `${22 + (i % 3) * 12}px`,
-                                }}
-                            />
-                        ))}
-                    </div>
+                <div className="mb-3 flex min-w-0 flex-col gap-3 sm:mb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
+                    <div className="flex w-full min-w-0 flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                        <div className="flex w-full min-w-0 flex-nowrap items-end gap-2 sm:w-auto sm:items-center sm:gap-2.5">
+                            <div className="flex shrink-0 items-end gap-3.5 sm:gap-4">
+                                <div
+                                    className="pointer-events-none flex items-end gap-0.5 sm:gap-1"
+                                    aria-hidden
+                                >
+                                    {[0, 1, 2, 3, 4].map((i) => (
+                                        <span
+                                            key={i}
+                                            className={`notes-eq-bar w-1.5 rounded-sm bg-gradient-to-t from-emerald-600 to-stage-mint sm:w-2 ${isReplaying ? "notes-eq-bar--playing" : ""}`}
+                                            style={{
+                                                animationDelay: `${i * 0.12}s`,
+                                                height: `${18 + (i % 3) * 10}px`,
+                                            }}
+                                        />
+                                    ))}
+                                </div>
 
-                    <div className="relative z-10 flex flex-col gap-2 sm:ml-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
-                        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-                            <label
-                                htmlFor="playback-speed"
-                                className="shrink-0 font-display text-xs uppercase tracking-wide text-violet-200 sm:text-sm"
-                            >
-                                Velocidade
-                            </label>
+                                <label
+                                    htmlFor="playback-speed"
+                                    className="whitespace-nowrap font-display text-xs uppercase leading-none tracking-wide text-violet-200 sm:pb-0.5 sm:text-sm"
+                                >
+                                    Velocidade
+                                </label>
+                            </div>
 
                             <select
                                 id="playback-speed"
@@ -541,7 +543,7 @@ export default function NotesTable() {
                                         ? "Não é possível alterar a velocidade durante a reprodução"
                                         : "Ritmo da sequência (pausas e duração de cada nota). O som mantém timbre natural; a reprodução não é acelerada no arquivo."
                                 }
-                                className="min-w-[11rem] rounded-xl border-2 border-sky-500/60 bg-gradient-to-b from-sky-600 to-sky-900 px-3 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade disabled:cursor-not-allowed disabled:opacity-45 enabled:hover:brightness-110"
+                                className="min-w-0 flex-1 rounded-xl border-2 border-sky-500/60 bg-gradient-to-b from-sky-600 to-sky-900 px-2.5 py-2.5 font-display text-xs uppercase tracking-wide text-white shadow-arcade disabled:cursor-not-allowed disabled:opacity-45 enabled:hover:brightness-110 sm:min-w-[11rem] sm:flex-none sm:px-3 sm:text-sm"
                             >
                                 {PLAYBACK_SPEED_TIERS.map((t, i) => (
                                     <option
@@ -557,11 +559,12 @@ export default function NotesTable() {
                             </select>
                         </div>
 
+                        <div className="grid w-full grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:flex sm:w-auto sm:grid-cols-none sm:gap-3">
                         <button
                             type="button"
                             onClick={handleClearEntireTable}
                             disabled={!canClearTable}
-                            className="rounded-xl border-2 border-stage-ink bg-gradient-to-b from-zinc-700 to-zinc-900 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
+                            className="min-h-11 w-full touch-manipulation rounded-xl border-2 border-stage-ink bg-gradient-to-b from-zinc-700 to-zinc-900 px-3 py-2.5 font-display text-xs uppercase tracking-wide text-white shadow-arcade transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto sm:px-4 sm:text-sm"
                         >
                             Limpar tabela
                         </button>
@@ -573,10 +576,11 @@ export default function NotesTable() {
                                 else void handleReplay();
                             }}
                             disabled={!isReplaying && Object.keys(cells).length === 0}
-                            className={`rounded-xl border-2 border-stage-ink bg-gradient-to-b from-emerald-500 to-emerald-700 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition enabled:hover:scale-[1.02] enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 ${!isReplaying && Object.keys(cells).length > 0 ? "ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-zinc-900 shadow-[0_0_24px_rgba(52,211,153,0.35)]" : ""} ${isReplaying ? "ring-2 ring-amber-300/50 ring-offset-2 ring-offset-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.25)]" : ""}`}
+                            className={`min-h-11 w-full touch-manipulation rounded-xl border-2 border-stage-ink bg-gradient-to-b from-emerald-500 to-emerald-700 px-3 py-2.5 font-display text-xs uppercase tracking-wide text-white shadow-arcade transition enabled:hover:scale-[1.02] enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto sm:px-4 sm:text-sm ${!isReplaying && Object.keys(cells).length > 0 ? "ring-2 ring-emerald-400/50 ring-offset-2 ring-offset-zinc-900 shadow-[0_0_24px_rgba(52,211,153,0.35)]" : ""} ${isReplaying ? "ring-2 ring-amber-300/50 ring-offset-2 ring-offset-zinc-900 shadow-[0_0_20px_rgba(251,191,36,0.25)]" : ""}`}
                         >
                             {isReplaying ? "⏹ Parar" : "▶ Reproduzir"}
                         </button>
+                        </div>
                     </div>
                 </div>
 
