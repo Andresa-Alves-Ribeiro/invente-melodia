@@ -4,11 +4,48 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: Outfit, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 100% 70% at 50% -15%, rgba(139, 92, 246, 0.35) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 50%, rgba(244, 114, 182, 0.12) 0%, transparent 45%),
+    radial-gradient(ellipse 60% 40% at 0% 80%, rgba(94, 234, 212, 0.1) 0%, transparent 40%),
+    linear-gradient(165deg, #0b0614 0%, #12102c 42%, #0f172a 100%);
+}
+
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 48px,
+    rgba(255, 255, 255, 0.03) 48px,
+    rgba(255, 255, 255, 0.03) 49px
+  );
+  opacity: 0.6;
+  z-index: 0;
+}
+
+@keyframes float-note {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(6deg);
+  }
+}
+
+.animate-float-note {
+  animation: float-note 5s ease-in-out infinite;
 }
 
 code {

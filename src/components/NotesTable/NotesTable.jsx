@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 const ROWS = 8;
 const COLS = 32;
@@ -14,6 +14,15 @@ const AUDIO_PLAY_MS = 500;
 const SILENCE_MS = 500;
 /** Bloco de mesma cor: 0,5 s por quadrado (ex.: 4 pretos = 2 s, um só stream, sem loop do ficheiro). */
 const PROLONG_MS_PER_CELL = 500;
+
+/** Níveis de velocidade: rótulos 2x–5x = +25% a +100% face ao normal; taxa real no áudio. */
+const PLAYBACK_SPEED_TIERS = [
+    { label: "1x", hint: "normal", rate: 1 },
+    { label: "2x", hint: "+25%", rate: 1.25 },
+    { label: "3x", hint: "+50%", rate: 1.5 },
+    { label: "4x", hint: "+75%", rate: 1.75 },
+    { label: "5x", hint: "+100%", rate: 2 },
+];
 
 function cellState(next, row, col) {
     if (col < 0 || col >= COLS) return undefined;
@@ -66,7 +75,8 @@ function durationForMode(mode) {
 }
 
 /** `track` opcional: em reprodução, regista `Audio` e `setTimeout` para parar. */
-function playRowAudioFromSrc(src, mode, track) {
+function playRowAudioFromSrc(src, mode, track, playbackRate = 1) {
+    const rate = Math.max(0.25, Math.min(4, playbackRate || 1));
     const regA = (a) => {
         if (track) track.audios.push(a);
         return a;
@@ -79,12 +89,13 @@ function playRowAudioFromSrc(src, mode, track) {
     const duration =
         mode.kind === "prolonged" ? PROLONG_MS_PER_CELL * mode.runLength : AUDIO_PLAY_MS;
     const audio = regA(new Audio(src));
+    audio.playbackRate = rate;
     audio.loop = false;
     void audio.play().catch(() => { });
     regT(() => {
         audio.pause();
         audio.currentTime = 0;
-    }, duration);
+    }, duration / rate);
 }
 
 /** Uma entrada por “grau” na ordem de baixo → cima (índice alinha com notasMusicais[i]). Cada nota aponta para o MP3 em `src/components/audios`. */
@@ -110,6 +121,12 @@ export default function NotesTable() {
     const replayAbortRef = useRef(false);
     const replayTrackRef = useRef({ audios: [], timeoutIds: [] });
     const endCurrentWaitRef = useRef(null);
+    const [speedTierIndex, setSpeedTierIndex] = useState(0);
+    const playbackRateRef = useRef(PLAYBACK_SPEED_TIERS[0].rate);
+
+    useEffect(() => {
+        playbackRateRef.current = PLAYBACK_SPEED_TIERS[speedTierIndex].rate;
+    }, [speedTierIndex]);
 
     function clearCell(row, col) {
         const key = `${row}-${col}`;
@@ -147,7 +164,7 @@ export default function NotesTable() {
                 const src = NOTAS_MUSICAIS[ROWS - 1 - row].src;
                 queueMicrotask(() => {
                     const mode = computePlayMode(next, row, col, "right");
-                    playRowAudioFromSrc(src, mode);
+                    playRowAudioFromSrc(src, mode, undefined, playbackRateRef.current);
                 });
                 return next;
             });
@@ -165,7 +182,7 @@ export default function NotesTable() {
                 const src = NOTAS_MUSICAIS[ROWS - 1 - row].src;
                 queueMicrotask(() => {
                     const mode = computePlayMode(next, row, col, "left");
-                    playRowAudioFromSrc(src, mode);
+                    playRowAudioFromSrc(src, mode, undefined, playbackRateRef.current);
                 });
                 return next;
             });
@@ -224,10 +241,12 @@ export default function NotesTable() {
                     resolve();
                     return;
                 }
+                const r = Math.max(0.25, playbackRateRef.current || 1);
+                const wallMs = ms / r;
                 const id = setTimeout(() => {
                     endCurrentWaitRef.current = null;
                     resolve();
-                }, ms);
+                }, wallMs);
                 endCurrentWaitRef.current = () => {
                     clearTimeout(id);
                     endCurrentWaitRef.current = null;
@@ -267,7 +286,12 @@ export default function NotesTable() {
                 }
                 const src = NOTAS_MUSICAIS[ROWS - 1 - row].src;
                 const mode = computePlayMode(cells, row, col, value);
-                playRowAudioFromSrc(src, mode, replayTrackRef.current);
+                playRowAudioFromSrc(
+                    src,
+                    mode,
+                    replayTrackRef.current,
+                    playbackRateRef.current,
+                );
                 if (mode.kind === "prolonged") {
                     for (let i = 0; i < mode.runLength; i++) {
                         if (replayAbortRef.current) break;
@@ -305,14 +329,58 @@ export default function NotesTable() {
         return "white";
     }
 
+    const filledCount = Object.keys(cells).length;
+    const speedTier = PLAYBACK_SPEED_TIERS[speedTierIndex];
+
     return (
-        <div className="w-full">
-            <div className="mb-2 flex justify-end gap-2">
+        <div className="w-full rounded-2xl border border-stage-line/80 bg-stage-panel/85 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.45),inset_0_2px_0_rgba(255,255,255,0.08)] backdrop-blur-sm sm:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1 text-xs font-semibold text-violet-100 sm:text-sm">
+                        <span className="h-2 w-2 rounded-full bg-stage-mint shadow-[0_0_8px_rgba(94,234,212,0.7)]" />
+                        {filledCount} nota{filledCount === 1 ? "" : "s"} na pauta
+                    </span>
+                    {isReplaying && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-200">
+                            A tocar…
+                        </span>
+                    )}
+                </div>
+                <div className="flex flex-wrap gap-2 text-[11px] text-violet-200/85 sm:text-xs">
+                    <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                        <span className="font-semibold text-stage-gold">Esq.</span> nota preta
+                    </span>
+                    <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                        <span className="font-semibold text-stage-mint">Dir.</span> nota verde
+                    </span>
+                    <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                        Duplo clique / duplo direito apaga
+                    </span>
+                </div>
+            </div>
+
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
+                <button
+                    type="button"
+                    onClick={() =>
+                        setSpeedTierIndex((i) => (i + 1) % PLAYBACK_SPEED_TIERS.length)
+                    }
+                    title="Clica para alternar: 1× normal até 5× (+100%)"
+                    className="rounded-xl border-2 border-sky-500/60 bg-gradient-to-b from-sky-600 to-sky-900 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition hover:brightness-110"
+                >
+                    Velocidade{" "}
+                    <span className="text-stage-mint">{speedTier.label}</span>
+                    {speedTier.hint !== "normal" ? (
+                        <span className="ml-1 text-[0.7em] font-normal normal-case text-sky-100/90">
+                            ({speedTier.hint})
+                        </span>
+                    ) : null}
+                </button>
                 <button
                     type="button"
                     onClick={handleClearEntireTable}
                     disabled={!canClearTable}
-                    className="rounded border-2 border-black bg-white px-4 py-2 font-medium uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-neutral-100"
+                    className="rounded-xl border-2 border-stage-ink bg-gradient-to-b from-zinc-700 to-zinc-900 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                     Limpar tabela
                 </button>
@@ -323,32 +391,36 @@ export default function NotesTable() {
                         else void handleReplay();
                     }}
                     disabled={!isReplaying && Object.keys(cells).length === 0}
-                    className="rounded border-2 border-black bg-white px-4 py-2 font-medium uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-neutral-100"
+                    className="rounded-xl border-2 border-stage-ink bg-gradient-to-b from-emerald-500 to-emerald-700 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                     {isReplaying ? "Parar" : "▶ Reproduzir"}
                 </button>
             </div>
-            <table className="border-8 border-black w-full table-fixed">
-                <tbody>
-                    {Array.from({ length: ROWS }, (_, row) => (
-                        <tr key={row}>
-                            <td className="bg-black text-white text-[1.2rem] leading-none uppercase text-center align-middle w-[1.5rem] min-w-0 px-0.5 py-0">{NOTAS_MUSICAIS[ROWS - 1 - row].label}</td>
 
-                            {Array.from({ length: COLS }, (_, col) => (
-                                <td key={col}
-                                    onMouseDown={(e) => handleNoteClick(e, row, col)}
-                                    onContextMenu={(e) => e.preventDefault()}
-                                    onDoubleClick={() => handleCellDoubleClick(row, col)}
-                                    style={{ background: squareBackground(row, col) }}
-                                    className={`${col === 16 ? '!border-l-8 border' : 'border'} 
-                            ${col % 4 === 0 ? 'border-l-4 border' : 'border'}
-                            ${col % 8 === 0 ? 'border-l-[6px] border' : 'border'} border-black h-12 w-4`}>
+            <div className="overflow-x-auto rounded-lg border border-black/40 bg-black/20 p-1 [-webkit-overflow-scrolling:touch]">
+                <table className="border-8 border-black w-full min-w-[1200px] table-fixed">
+                    <tbody>
+                        {Array.from({ length: ROWS }, (_, row) => (
+                            <tr key={row}>
+                                <td className="min-w-0 w-[1.5rem] bg-gradient-to-b from-zinc-900 to-black px-0.5 py-0 text-center align-middle font-display text-[1.05rem] uppercase leading-none text-stage-gold shadow-[inset_0_0_12px_rgba(244,208,63,0.12)] sm:text-[1.2rem]">
+                                    {NOTAS_MUSICAIS[ROWS - 1 - row].label}
                                 </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+
+                                {Array.from({ length: COLS }, (_, col) => (
+                                    <td
+                                        key={col}
+                                        onMouseDown={(e) => handleNoteClick(e, row, col)}
+                                        onContextMenu={(e) => e.preventDefault()}
+                                        onDoubleClick={() => handleCellDoubleClick(row, col)}
+                                        style={{ background: squareBackground(row, col) }}
+                                        className={`${col === 16 ? '!border-l-8 border' : 'border'} ${col % 4 === 0 ? 'border-l-4 border' : 'border'} ${col % 8 === 0 ? 'border-l-[6px] border' : 'border'} h-12 w-4 cursor-crosshair border-black transition-[filter] hover:brightness-95`}
+                                    />
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }
