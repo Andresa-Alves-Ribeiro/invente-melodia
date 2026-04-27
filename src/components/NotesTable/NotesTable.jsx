@@ -2,96 +2,89 @@ import { useState, useRef, useCallback } from "react";
 
 const ROWS = 8;
 const COLS = 32;
+/**
+ * Linha de recurso se a grelha começar com pausas: ainda não há “nota com cor” anterior
+ * para alinhar o vermelho da pausa.
+ */
+const PAUSE_HIGHLIGHT_ROW = Math.min(3, ROWS - 1);
 
 const DOUBLE_RIGHT_MS = 500;
+/** Duração de uma nota preta, de um quadrado vazio (silêncio) e de cada célula num bloco da mesma cor. */
 const AUDIO_PLAY_MS = 500;
-/** Bloco de mesma cor: 1 s por quadrado (ex.: 4 pretos = 4 s, um só stream, sem loop do ficheiro). */
-const PROLONG_MS_PER_CELL = 1000;
+const SILENCE_MS = 500;
+/** Bloco de mesma cor: 0,5 s por quadrado (ex.: 4 pretos = 2 s, um só stream, sem loop do ficheiro). */
+const PROLONG_MS_PER_CELL = 500;
 
 function cellState(next, row, col) {
-  if (col < 0 || col >= COLS) return undefined;
-  return next[`${row}-${col}`];
+    if (col < 0 || col >= COLS) return undefined;
+    return next[`${row}-${col}`];
 }
 
 function isFilled(s) {
-  return s === "left" || s === "right";
+    return s === "left" || s === "right";
+}
+
+/** Maior índice de coluna `col` com alguma célula em `state` (chaves `row-col`). */
+function maxColWithAnyCell(state) {
+    let m = 0;
+    for (const k of Object.keys(state)) {
+        const c = Number(String(k).split("-").pop());
+        if (Number.isFinite(c) && c > m) m = c;
+    }
+    return m;
 }
 
 /** No máximo uma nota por coluna (tempo): remove outras linhas na mesma coluna antes de pintar. */
 function applyPaintToColumn(state, row, col, value) {
-  const next = { ...state };
-  for (let r = 0; r < ROWS; r++) {
-    if (r === row) continue;
-    const k = `${r}-${col}`;
-    if (k in next) delete next[k];
-  }
-  next[`${row}-${col}`] = value;
-  return next;
+    const next = { ...state };
+    for (let r = 0; r < ROWS; r++) {
+        if (r === row) continue;
+        const k = `${r}-${col}`;
+        if (k in next) delete next[k];
+    }
+    next[`${row}-${col}`] = value;
+    return next;
 }
 
 /**
- * - Vizinho imediato com outra cor (preto x verde): toca 2x o fragmento.
- * - Mesma cor, bloco de 2+: o mesmo ficheiro toca 1 s × nº de quadrados contíguos, sem repetição em blocos.
- * - Caso contrário: um fragmento.
+ * - Mesma cor, bloco de 2+: um só ficheiro, 0,5 s × nº de quadrados contíguos (preto e verde iguais).
+ * - Caso contrário: um fragmento de 0,5 s (sem tocar 2x por vizinhança de outra cor).
  */
 function computePlayMode(next, row, col, v) {
-  const L = cellState(next, row, col - 1);
-  const R = cellState(next, row, col + 1);
-  if ((isFilled(L) && L !== v) || (isFilled(R) && R !== v)) {
-    return { kind: "repeat" };
-  }
-  let run = 1;
-  for (let c = col - 1; c >= 0 && next[`${row}-${c}`] === v; c--) run += 1;
-  for (let c = col + 1; c < COLS && next[`${row}-${c}`] === v; c++) run += 1;
-  if (run >= 2) {
-    return { kind: "prolonged", runLength: run };
-  }
-  return { kind: "single" };
+    let run = 1;
+    for (let c = col - 1; c >= 0 && next[`${row}-${c}`] === v; c--) run += 1;
+    for (let c = col + 1; c < COLS && next[`${row}-${c}`] === v; c++) run += 1;
+    if (run >= 2) {
+        return { kind: "prolonged", runLength: run };
+    }
+    return { kind: "single" };
 }
 
 function durationForMode(mode) {
-  if (mode.kind === "repeat") return 2 * AUDIO_PLAY_MS;
-  if (mode.kind === "prolonged") return PROLONG_MS_PER_CELL * mode.runLength;
-  return AUDIO_PLAY_MS;
+    if (mode.kind === "prolonged") return PROLONG_MS_PER_CELL * mode.runLength;
+    return AUDIO_PLAY_MS;
 }
 
 /** `track` opcional: em reprodução, regista `Audio` e `setTimeout` para parar. */
 function playRowAudioFromSrc(src, mode, track) {
-  const regA = (a) => {
-    if (track) track.audios.push(a);
-    return a;
-  };
-  const regT = (fn, ms) => {
-    const id = setTimeout(fn, ms);
-    if (track) track.timeoutIds.push(id);
-    return id;
-  };
-  if (mode.kind === "repeat") {
-    const a1 = regA(new Audio(src));
-    void a1.play().catch(() => { });
+    const regA = (a) => {
+        if (track) track.audios.push(a);
+        return a;
+    };
+    const regT = (fn, ms) => {
+        const id = setTimeout(fn, ms);
+        if (track) track.timeoutIds.push(id);
+        return id;
+    };
+    const duration =
+        mode.kind === "prolonged" ? PROLONG_MS_PER_CELL * mode.runLength : AUDIO_PLAY_MS;
+    const audio = regA(new Audio(src));
+    audio.loop = false;
+    void audio.play().catch(() => { });
     regT(() => {
-      a1.pause();
-      a1.currentTime = 0;
-    }, AUDIO_PLAY_MS);
-    regT(() => {
-      const a2 = regA(new Audio(src));
-      void a2.play().catch(() => { });
-      regT(() => {
-        a2.pause();
-        a2.currentTime = 0;
-      }, AUDIO_PLAY_MS);
-    }, AUDIO_PLAY_MS);
-    return;
-  }
-  const duration =
-    mode.kind === "prolonged" ? PROLONG_MS_PER_CELL * mode.runLength : AUDIO_PLAY_MS;
-  const audio = regA(new Audio(src));
-  audio.loop = false;
-  void audio.play().catch(() => { });
-  regT(() => {
-    audio.pause();
-    audio.currentTime = 0;
-  }, duration);
+        audio.pause();
+        audio.currentTime = 0;
+    }, duration);
 }
 
 /** Uma entrada por “grau” na ordem de baixo → cima (índice alinha com notasMusicais[i]). Cada nota aponta para o MP3 em `src/components/audios`. */
@@ -110,7 +103,7 @@ export default function NotesTable() {
     const [cells, setCells] = useState({});
     const [actionHistory, setActionHistory] = useState([]);
     const [isReplaying, setIsReplaying] = useState(false);
-    /** Durante ▶ Reproduzir: célula cuja nota está a tocar (vermelho). */
+    /** Durante ▶ Reproduzir: a célula a vermelho (nota ou pausa: linha = última nota colorida, se existir). */
     const [replayHighlight, setReplayHighlight] = useState(null);
     const lastRightDownRef = useRef({ at: 0, row: null, col: null });
     const isReplayingRef = useRef(false);
@@ -218,46 +211,75 @@ export default function NotesTable() {
     }, [isReplaying, stopReplay]);
 
     const handleReplay = useCallback(async () => {
-        if (isReplayingRef.current || actionHistory.length === 0) return;
+        if (isReplayingRef.current) return;
+        if (Object.keys(cells).length === 0) return;
         replayAbortRef.current = false;
         replayTrackRef.current = { audios: [], timeoutIds: [] };
         isReplayingRef.current = true;
         setIsReplaying(true);
         setReplayHighlight(null);
-        let state = {};
+        const waitFor = (ms) =>
+            new Promise((resolve) => {
+                if (replayAbortRef.current) {
+                    resolve();
+                    return;
+                }
+                const id = setTimeout(() => {
+                    endCurrentWaitRef.current = null;
+                    resolve();
+                }, ms);
+                endCurrentWaitRef.current = () => {
+                    clearTimeout(id);
+                    endCurrentWaitRef.current = null;
+                    resolve();
+                };
+            });
         try {
-            for (const ev of actionHistory) {
+            let lastColoredRow = null;
+            const endCol = maxColWithAnyCell(cells);
+            for (let col = 0; col <= endCol; col++) {
                 if (replayAbortRef.current) break;
-                if (ev.type === "clear") {
-                    const k = `${ev.row}-${ev.col}`;
-                    const n = { ...state };
-                    delete n[k];
-                    state = n;
+                let row = null;
+                let value = null;
+                for (let r = 0; r < ROWS; r++) {
+                    const k = `${r}-${col}`;
+                    if (k in cells) {
+                        row = r;
+                        value = cells[k];
+                        break;
+                    }
+                }
+                if (row == null) {
+                    const restRow = lastColoredRow ?? PAUSE_HIGHLIGHT_ROW;
+                    setReplayHighlight({ rest: true, row: restRow, col });
+                    await waitFor(SILENCE_MS);
+                    setReplayHighlight(null);
                     continue;
                 }
-                if (ev.type === "paint") {
-                    const { row, col, value } = ev;
-                    const next = applyPaintToColumn(state, row, col, value);
-                    const src = NOTAS_MUSICAIS[ROWS - 1 - row].src;
-                    const mode = computePlayMode(next, row, col, value);
-                    setReplayHighlight({ row, col });
-                    playRowAudioFromSrc(src, mode, replayTrackRef.current);
-                    const wait = durationForMode(mode);
-                    await new Promise((resolve) => {
-                        const id = setTimeout(() => {
-                            endCurrentWaitRef.current = null;
-                            resolve();
-                        }, wait);
-                        endCurrentWaitRef.current = () => {
-                            clearTimeout(id);
-                            endCurrentWaitRef.current = null;
-                            resolve();
-                        };
-                    });
-                    setReplayHighlight(null);
-                    if (replayAbortRef.current) break;
-                    state = next;
+                /* Pretos ou verdes consecutivos na mesma linha: só a 1.ª célula do bloco toca;
+                   duração = 0,5 s × células (prolong) como em computePlayMode. */
+                if (
+                    col > 0 &&
+                    isFilled(value) &&
+                    cellState(cells, row, col - 1) === value
+                ) {
+                    continue;
                 }
+                const src = NOTAS_MUSICAIS[ROWS - 1 - row].src;
+                const mode = computePlayMode(cells, row, col, value);
+                playRowAudioFromSrc(src, mode, replayTrackRef.current);
+                if (mode.kind === "prolonged") {
+                    for (let i = 0; i < mode.runLength; i++) {
+                        if (replayAbortRef.current) break;
+                        setReplayHighlight({ row, col: col + i });
+                        await waitFor(AUDIO_PLAY_MS);
+                    }
+                } else {
+                    setReplayHighlight({ row, col });
+                    await waitFor(durationForMode(mode));
+                }
+                setReplayHighlight(null);
+                lastColoredRow = row;
             }
         } finally {
             isReplayingRef.current = false;
@@ -267,7 +289,7 @@ export default function NotesTable() {
             replayTrackRef.current = { audios: [], timeoutIds: [] };
             replayAbortRef.current = false;
         }
-    }, [actionHistory]);
+    }, [cells]);
 
     function squareBackground(row, col) {
         if (
@@ -300,33 +322,33 @@ export default function NotesTable() {
                         if (isReplaying) stopReplay();
                         else void handleReplay();
                     }}
-                    disabled={!isReplaying && actionHistory.length === 0}
+                    disabled={!isReplaying && Object.keys(cells).length === 0}
                     className="rounded border-2 border-black bg-white px-4 py-2 font-medium uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-neutral-100"
                 >
                     {isReplaying ? "Parar" : "▶ Reproduzir"}
                 </button>
             </div>
             <table className="border-8 border-black w-full table-fixed">
-            <tbody>
-                {Array.from({ length: ROWS }, (_, row) => (
-                    <tr key={row}>
-                        <td className="bg-black text-white text-[1.2rem] leading-none uppercase text-center align-middle w-[1.5rem] min-w-0 px-0.5 py-0">{NOTAS_MUSICAIS[ROWS - 1 - row].label}</td>
+                <tbody>
+                    {Array.from({ length: ROWS }, (_, row) => (
+                        <tr key={row}>
+                            <td className="bg-black text-white text-[1.2rem] leading-none uppercase text-center align-middle w-[1.5rem] min-w-0 px-0.5 py-0">{NOTAS_MUSICAIS[ROWS - 1 - row].label}</td>
 
-                        {Array.from({ length: COLS }, (_, col) => (
-                            <td key={col}
-                                onMouseDown={(e) => handleNoteClick(e, row, col)}
-                                onContextMenu={(e) => e.preventDefault()}
-                                onDoubleClick={() => handleCellDoubleClick(row, col)}
-                                style={{ background: squareBackground(row, col) }}
-                                className={`${col === 16 ? '!border-l-8 border' : 'border'} 
+                            {Array.from({ length: COLS }, (_, col) => (
+                                <td key={col}
+                                    onMouseDown={(e) => handleNoteClick(e, row, col)}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    onDoubleClick={() => handleCellDoubleClick(row, col)}
+                                    style={{ background: squareBackground(row, col) }}
+                                    className={`${col === 16 ? '!border-l-8 border' : 'border'} 
                             ${col % 4 === 0 ? 'border-l-4 border' : 'border'}
                             ${col % 8 === 0 ? 'border-l-[6px] border' : 'border'} border-black h-12 w-4`}>
-                            </td>
-                        ))}
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 }
