@@ -16,9 +16,9 @@ function App() {
               ♪
             </span>
             <h1 className="font-display text-3xl leading-tight text-white drop-shadow-md sm:text-4xl md:text-5xl">
-              Invente{' '}
+              Inventor de{' '}
               <span className="bg-gradient-to-r from-amber-300 via-pink-400 to-teal-300 bg-clip-text text-transparent">
-                Melodia
+                Melodias
               </span>
             </h1>
             <span
