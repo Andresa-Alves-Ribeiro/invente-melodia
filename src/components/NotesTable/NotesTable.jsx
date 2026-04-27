@@ -105,6 +105,64 @@ function durationForMode(mode) {
     return AUDIO_PLAY_MS;
 }
 
+const AUDIO_POOL_SIZE = 4;
+
+const audioPoolBySrc = new Map();
+
+function getAudioPool(src) {
+    let pool = audioPoolBySrc.get(src);
+
+    if (!pool) {
+        const elements = [];
+
+        for (let i = 0; i < AUDIO_POOL_SIZE; i++) {
+            const a = new Audio(src);
+
+            a.preload = "auto";
+
+            a.playsInline = true;
+
+            elements.push(a);
+        }
+
+        pool = { elements, next: 0 };
+
+        audioPoolBySrc.set(src, pool);
+    }
+
+    return pool;
+}
+
+function takePooledAudio(src) {
+    const pool = getAudioPool(src);
+
+    const audio = pool.elements[pool.next];
+
+    pool.next = (pool.next + 1) % AUDIO_POOL_SIZE;
+
+    return audio;
+}
+
+function preloadAllNoteAudios() {
+    const seen = new Set();
+
+    for (const { src } of NOTAS_MUSICAIS) {
+        if (seen.has(src)) continue;
+
+        seen.add(src);
+
+        const { elements } = getAudioPool(src);
+
+        for (const a of elements) {
+            try {
+                a.load();
+            } catch {
+                /* ignore */
+            }
+        }
+    }
+}
+
 function playRowAudioFromSrc(src, mode, track, sequenceSpeed = 1) {
     const rate = Math.max(0.25, Math.min(4, sequenceSpeed || 1));
 
@@ -127,7 +185,11 @@ function playRowAudioFromSrc(src, mode, track, sequenceSpeed = 1) {
             ? PROLONG_MS_PER_CELL * mode.runLength
             : AUDIO_PLAY_MS;
 
-    const audio = regA(new Audio(src));
+    const audio = regA(takePooledAudio(src));
+
+    audio.pause();
+
+    audio.currentTime = 0;
 
     audio.loop = false;
 
@@ -166,6 +228,10 @@ export default function NotesTable() {
     useEffect(() => {
         playbackRateRef.current = PLAYBACK_SPEED_TIERS[speedTierIndex].rate;
     }, [speedTierIndex]);
+
+    useEffect(() => {
+        preloadAllNoteAudios();
+    }, []);
 
     function clearCell(row, col) {
         const key = `${row}-${col}`;
