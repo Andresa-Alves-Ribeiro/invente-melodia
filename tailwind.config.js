@@ -22,6 +22,15 @@ module.exports = {
           '0 0 0 3px rgba(244,208,63,0.35), 0 6px 0 #0b0614, 0 10px 28px rgba(0,0,0,0.5)',
         'arcade-inset': 'inset 0 2px 0 rgba(255,255,255,0.08)',
       },
+      keyframes: {
+        'playhead-sweep': {
+          '0%, 100%': { opacity: '0.12' },
+          '50%': { opacity: '0.35' },
+        },
+      },
+      animation: {
+        'playhead-sweep': 'playhead-sweep 2.5s ease-in-out infinite',
+      },
     },
   },
   plugins: [],
