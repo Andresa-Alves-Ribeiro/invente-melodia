@@ -330,7 +330,6 @@ export default function NotesTable() {
     }
 
     const filledCount = Object.keys(cells).length;
-    const speedTier = PLAYBACK_SPEED_TIERS[speedTierIndex];
 
     return (
         <div className="w-full rounded-2xl border border-stage-line/80 bg-stage-panel/85 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.45),inset_0_2px_0_rgba(255,255,255,0.08)] backdrop-blur-sm sm:p-6">
@@ -360,22 +359,33 @@ export default function NotesTable() {
             </div>
 
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end sm:gap-3">
-                <button
-                    type="button"
-                    onClick={() =>
-                        setSpeedTierIndex((i) => (i + 1) % PLAYBACK_SPEED_TIERS.length)
-                    }
-                    title="Clica para alternar: 1× normal até 5× (+100%)"
-                    className="rounded-xl border-2 border-sky-500/60 bg-gradient-to-b from-sky-600 to-sky-900 px-4 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade transition hover:brightness-110"
-                >
-                    Velocidade{" "}
-                    <span className="text-stage-mint">{speedTier.label}</span>
-                    {speedTier.hint !== "normal" ? (
-                        <span className="ml-1 text-[0.7em] font-normal normal-case text-sky-100/90">
-                            ({speedTier.hint})
-                        </span>
-                    ) : null}
-                </button>
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                    <label
+                        htmlFor="playback-speed"
+                        className="shrink-0 font-display text-xs uppercase tracking-wide text-violet-200 sm:text-sm"
+                    >
+                        Velocidade
+                    </label>
+                    <select
+                        id="playback-speed"
+                        value={speedTierIndex}
+                        disabled={isReplaying}
+                        onChange={(e) => setSpeedTierIndex(Number(e.target.value))}
+                        title={
+                            isReplaying
+                                ? "Não é possível alterar a velocidade durante a reprodução"
+                                : "Velocidade de reprodução (1× a 5×)"
+                        }
+                        className="min-w-[11rem] rounded-xl border-2 border-sky-500/60 bg-gradient-to-b from-sky-600 to-sky-900 px-3 py-2.5 font-display text-sm uppercase tracking-wide text-white shadow-arcade disabled:cursor-not-allowed disabled:opacity-45 enabled:hover:brightness-110"
+                    >
+                        {PLAYBACK_SPEED_TIERS.map((t, i) => (
+                            <option key={t.label + t.rate} value={i} className="bg-zinc-900 text-white">
+                                {t.label}
+                                {t.hint === "normal" ? " (normal)" : ` (${t.hint})`}
+                            </option>
+                        ))}
+                    </select>
+                </div>
                 <button
                     type="button"
                     onClick={handleClearEntireTable}
