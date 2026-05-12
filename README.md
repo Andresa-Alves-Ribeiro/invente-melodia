@@ -11,19 +11,14 @@ Aplicação web interativa para compor melodias numa tabela estilo “sequenciad
 
 ## Preview
 
-> Adicione capturas de tela na pasta `docs/images/` e substitua os exemplos abaixo por caminhos locais ou URLs estáveis.
+Tela principal 
 
-Tela principal (substituir pelo teu screenshot)
+<img width="2069" height="887" alt="Captura de tela 2026-05-12 201037" src="https://github.com/user-attachments/assets/70124e3c-da29-433e-8810-cc261c0162ee" />
 
-```text
-docs/images/tela-principal.png
-```
 
-Tabela de composição (substituir pelo teu screenshot)
+Tabela com composição
 
-```text
-docs/images/tabela-notas.png
-```
+<img width="2105" height="806" alt="Captura de tela 2026-05-12 201106" src="https://github.com/user-attachments/assets/714de915-f710-40f8-ad9e-80603bf049d7" />
 
 ---
 
